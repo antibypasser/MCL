@@ -1,0 +1,151 @@
+$cpu = Get-WmiObject Win32_Processor | Select-Object -First 1
+
+function Ensure-Admin {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal   = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) {
+        Write-Host "[!] Not running as admin. Restarting with elevated privileges..." -ForegroundColor Yellow
+        Start-Process -FilePath "powershell" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+        exit
+    }
+}
+Ensure-Admin
+
+$startTime = Get-Date
+$ErrorActionPreference = 'Stop'
+
+Write-Host " __  __    _____   _" -ForegroundColor Blue
+Write-Host "|  \/  |  / ____| | |" -ForegroundColor Blue
+Write-Host "| \  / | | |      | |" -ForegroundColor Blue
+Write-Host "| |\/| | | |      | |" -ForegroundColor Blue
+Write-Host "| |  | | | |____  | |____" -ForegroundColor Blue
+Write-Host "|_|  |_|  \_____| |______|" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  MCL PROCESS EXPLORER" -ForegroundColor Blue
+Write-Host "  Made by @ravenader1" -ForegroundColor Blue
+Write-Host ""
+Write-Host "Instruction: Wait for Process Explorer to appear, scroll to the bottom, then close it." -ForegroundColor Cyan
+
+if ($cpu.NumberOfCores -ge 4 -and $cpu.MaxClockSpeed -ge 2500) {
+    Write-Host "Detected CPU: $($cpu.Name)" -ForegroundColor Green
+} else {
+    Write-Host "Detected CPU: $($cpu.Name)" -ForegroundColor Red
+    Write-Host "This might take longer than usual" -ForegroundColor Yellow
+}
+Write-Host ""
+
+$toolsPath          = "C:\Tools"
+$installPath        = "C:\Tools\Process Explorer"
+$processExplorerUrl = "https://download.sysinternals.com/files/ProcessExplorer.zip"
+$processExplorerZip = "$env:TEMP\ProcessExplorer.zip"
+$configRegUrl       = "https://pastebin.com/raw/YBY3u33m"
+$configRegPath      = "$env:TEMP\procexp_config.reg"
+
+if (Test-Path $toolsPath) {
+    Write-Host "Process Explorer directory already exists." -ForegroundColor White
+} else {
+    Write-Host "Creating base tools directory..." -ForegroundColor White
+    try {
+        New-Item -ItemType Directory -Path $toolsPath -Force | Out-Null
+    } catch {
+        Write-Host "[ERROR] Failed to create tools directory: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+try {
+    $items = Get-ChildItem -LiteralPath $toolsPath -Force | Where-Object { $_.Name -ieq "Process Explorer" }
+    foreach ($item in $items) { Remove-Item -LiteralPath $item.FullName -Recurse -Force -ErrorAction Stop }
+} catch {
+    Write-Host "[ERROR] Failed to remove old Process Explorer content: $_" -ForegroundColor Red
+}
+
+Write-Host ""
+
+$stepMsg = @(
+    "Creating Process Explorer folder",
+    "Downloading Process Explorer",
+    "Extracting files",
+    "Downloading registry config",
+    "Importing registry config",
+    "Launching Process Explorer"
+)
+$successSteps = 0
+$totalSteps   = $stepMsg.Count
+
+function Show-Step {
+    param([bool]$ok, [int]$i)
+    Write-Host $stepMsg[$i]
+    if ($ok) {
+        Write-Host "Loading... Success" -ForegroundColor Green
+        $global:successSteps++
+    } else {
+        Write-Host "Loading... Failed" -ForegroundColor Red
+    }
+}
+
+try { Get-Process -Name procexp,procexp64 -ErrorAction SilentlyContinue | Stop-Process -Force } catch {}
+
+try {
+    New-Item -ItemType Directory -Path $installPath -Force | Out-Null
+    Show-Step $true 0
+} catch {
+    Show-Step $false 0
+}
+
+try {
+    Invoke-WebRequest -Uri $processExplorerUrl -OutFile $processExplorerZip
+    Show-Step $true 1
+} catch {
+    Show-Step $false 1
+}
+
+try {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    if (Test-Path $installPath) {
+        Get-ChildItem -Path $installPath -Recurse | Remove-Item -Force -Recurse -ErrorAction Stop
+    }
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($processExplorerZip, $installPath)
+    Remove-Item $processExplorerZip -Force
+    Show-Step $true 2
+} catch {
+    Write-Host "[ERROR] Extraction failed: $($_.Exception.Message)" -ForegroundColor Red
+    Show-Step $false 2
+}
+
+try {
+    Invoke-WebRequest -Uri $configRegUrl -OutFile $configRegPath
+    if (-not (Test-Path $configRegPath) -or (Get-Content $configRegPath).Length -eq 0) {
+        throw "Downloaded config file is empty or missing."
+    }
+    Show-Step $true 3
+} catch {
+    Write-Host "[ERROR] Failed to download registry config: $($_.Exception.Message)" -ForegroundColor Red
+    Show-Step $false 3
+}
+
+try {
+    & reg.exe import "`"$configRegPath`""
+    Remove-Item $configRegPath -Force -ErrorAction SilentlyContinue
+    Show-Step $true 4
+} catch {
+    Write-Host "[ERROR] Failed to import registry config: $($_.Exception.Message)" -ForegroundColor Red
+    Show-Step $false 4
+}
+
+$procexpPath = Join-Path $installPath "procexp.exe"
+try {
+    if (Test-Path $procexpPath) {
+        Start-Process -FilePath $procexpPath -WindowStyle Maximized -Verb RunAs
+        Show-Step $true 5
+    } else {
+        throw "procexp.exe not found in expected directory."
+    }
+} catch {
+    Write-Host "[ERROR] Could not launch Process Explorer: $($_.Exception.Message)" -ForegroundColor Red
+    Show-Step $false 5
+}
+
+Write-Host ""
+$seconds = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 2)
+$percent = [math]::Round(($successSteps / $totalSteps) * 100)
+Write-Host "Result: $successSteps / $totalSteps steps succeeded ($percent%) in $seconds seconds." -ForegroundColor Cyan
