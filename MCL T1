@@ -1,151 +1,269 @@
-$cpu = Get-WmiObject Win32_Processor | Select-Object -First 1
-
-function Ensure-Admin {
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal   = New-Object Security.Principal.WindowsPrincipal($currentUser)
-    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) {
-        Write-Host "[!] Not running as admin. Restarting with elevated privileges..." -ForegroundColor Yellow
-        Start-Process -FilePath "powershell" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-        exit
-    }
+function Write-ColoredLine {
+param (
+[string]$Text,
+[ConsoleColor]$Color = 'White'
+)
+$oldColor = $Host.UI.RawUI.ForegroundColor
+$Host.UI.RawUI.ForegroundColor = $Color
+Write-Host $Text
+$Host.UI.RawUI.ForegroundColor = $oldColor
 }
-Ensure-Admin
-
-$startTime = Get-Date
-$ErrorActionPreference = 'Stop'
-
-Write-Host " __  __    _____   _" -ForegroundColor Blue
-Write-Host "|  \/  |  / ____| | |" -ForegroundColor Blue
-Write-Host "| \  / | | |      | |" -ForegroundColor Blue
-Write-Host "| |\/| | | |      | |" -ForegroundColor Blue
-Write-Host "| |  | | | |____  | |____" -ForegroundColor Blue
-Write-Host "|_|  |_|  \_____| |______|" -ForegroundColor Blue
+function Wait-ForEnter {
+Start-Sleep -Seconds 1
+Write-Host "Press Enter to continue..." -ForegroundColor Yellow
+while ($true) {
+if ([System.Console]::KeyAvailable) {
+$key = [System.Console]::ReadKey($true)
+if ($key.Key -eq "Enter") { break }
+}
+Start-Sleep -Milliseconds 100
+}
+}
+Clear-Host
+Write-Host " _____ _____  _      ____             ____        _           " -ForegroundColor Yellow
+Write-Host "| ____|_   _|/ \    |  _ \ ___  ___  |  _ \ _   _| | ___  ___ " -ForegroundColor Yellow
+Write-Host "|  _|   | | / _ \   | |_) / _ \/ __| | |_) | | | | |/ _ \/ __|" -ForegroundColor Yellow
+Write-Host "| |___  | |/ ___ \  |  _ <  __/ (__  |  _ <| |_| | |  __/\__ \" -ForegroundColor Yellow
+Write-Host "|_____| |_/_/   \_\ |_| \_\___|\___| |_| \_\\__,_|_|\___||___/" -ForegroundColor Yellow
+Write-ColoredLine ""
+Write-ColoredLine "=== Recording Rule Hub ===" Yellow
+Write-ColoredLine "> Complete both steps with 100% success to pass." White
+Write-ColoredLine "> Applications will download to C:\ToolsETA." White
+Write-ColoredLine "> They auto-extract and apply per window." White
+Write-ColoredLine "> If a prompt shows up, press OK to run the application." White
+Write-ColoredLine "> The applications will automatically go full screen for you." White
+Write-ColoredLine "> This PowerShell process currently has 2 steps." White
+Write-ColoredLine "> Depending on your CPU, it might take longer to load." White
 Write-Host ""
-Write-Host "  MCL PROCESS EXPLORER" -ForegroundColor Blue
-Write-Host "  Made by @ravenader1" -ForegroundColor Blue
-Write-Host ""
-Write-Host "Instruction: Wait for Process Explorer to appear, scroll to the bottom, then close it." -ForegroundColor Cyan
+$cpu = Get-WmiObject Win32_Processor | Select-Object -First 1
 
 if ($cpu.NumberOfCores -ge 4 -and $cpu.MaxClockSpeed -ge 2500) {
     Write-Host "Detected CPU: $($cpu.Name)" -ForegroundColor Green
+    Write-Host "Your CPU looks good." -ForegroundColor Green
 } else {
     Write-Host "Detected CPU: $($cpu.Name)" -ForegroundColor Red
-    Write-Host "This might take longer than usual" -ForegroundColor Yellow
+    Write-Host "Your CPU isn't that strong. This process may take longer for you." -ForegroundColor Yellow
+}
+Write-ColoredLine ""
+Write-ColoredLine "=== Discord Servers ===" Yellow
+Write-ColoredLine "discord.gg/mcl" White
+Write-ColoredLine "discord.gg/rivalsleague" White
+Write-ColoredLine "discord.gg/eta" White
+Write-ColoredLine "discord.gg/etajd" White
+Write-ColoredLine ""
+Write-ColoredLine "=== Credits ===" Yellow
+Write-ColoredLine "Made by @ravenader1" White
+Write-ColoredLine "Made by @cyberthreats" White
+Write-Host ""
+Wait-ForEnter
+Clear-Host
+
+# ====== STEP 1: SYSTEM CHECK ====== 
+
+Write-ColoredLine "Step 1: SYSTEM Check - by @cyberthreats" Cyan
+Write-ColoredLine "INSTRUCTION: Reach 100% success" Yellow
+Write-Host "" # Blank line above progress bar
+for ($i = 0; $i -le 10; $i++) {
+$percent = $i * 10
+$bar = "#" * $i + "-" * (10 - $i)
+$line = "Progress: [ $bar ] $percent%"
+Write-Host -NoNewline "`r"
+$oldColor = $Host.UI.RawUI.ForegroundColor
+$Host.UI.RawUI.ForegroundColor = 'Blue'
+Write-Host $line -NoNewline
+$Host.UI.RawUI.ForegroundColor = $oldColor
+Start-Sleep -Milliseconds 200
 }
 Write-Host ""
-
-$toolsPath          = "C:\Tools"
-$installPath        = "C:\Tools\Process Explorer"
-$processExplorerUrl = "https://download.sysinternals.com/files/ProcessExplorer.zip"
-$processExplorerZip = "$env:TEMP\ProcessExplorer.zip"
-$configRegUrl       = "https://pastebin.com/raw/YBY3u33m"
-$configRegPath      = "$env:TEMP\procexp_config.reg"
-
-if (Test-Path $toolsPath) {
-    Write-Host "Process Explorer directory already exists." -ForegroundColor White
-} else {
-    Write-Host "Creating base tools directory..." -ForegroundColor White
-    try {
-        New-Item -ItemType Directory -Path $toolsPath -Force | Out-Null
-    } catch {
-        Write-Host "[ERROR] Failed to create tools directory: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-
-try {
-    $items = Get-ChildItem -LiteralPath $toolsPath -Force | Where-Object { $_.Name -ieq "Process Explorer" }
-    foreach ($item in $items) { Remove-Item -LiteralPath $item.FullName -Recurse -Force -ErrorAction Stop }
-} catch {
-    Write-Host "[ERROR] Failed to remove old Process Explorer content: $_" -ForegroundColor Red
-}
-
 Write-Host ""
-
-$stepMsg = @(
-    "Creating Process Explorer folder",
-    "Downloading Process Explorer",
-    "Extracting files",
-    "Downloading registry config",
-    "Importing registry config",
-    "Launching Process Explorer"
+$exclusionsOutput = @()
+$defenderOutput = @()
+$modulesOutput = @()
+$windowsOutput = @()
+$memoryIntegrityOutput = @()
+$threatsOutput = @()
+$powershellSigOutput = @()
+$defaultModules = @(
+"Microsoft.PowerShell.Archive", "Microsoft.PowerShell.Diagnostics", "Microsoft.PowerShell.Host",
+"Microsoft.PowerShell.LocalAccounts", "Microsoft.PowerShell.Management", "Microsoft.PowerShell.Security",
+"Microsoft.PowerShell.Utility", "PackageManagement", "PowerShellGet", "PSReadLine", "Pester", "ThreadJob"
 )
-$successSteps = 0
-$totalSteps   = $stepMsg.Count
-
-function Show-Step {
-    param([bool]$ok, [int]$i)
-    Write-Host $stepMsg[$i]
-    if ($ok) {
-        Write-Host "Loading... Success" -ForegroundColor Green
-        $global:successSteps++
-    } else {
-        Write-Host "Loading... Failed" -ForegroundColor Red
-    }
+$protectedModule = "Microsoft.PowerShell.Operation.Validation"
+$modulesPath = "C:\Program Files\WindowsPowerShell\Modules"
+$deletedAny = $false
+$protectedFilePath = "$modulesPath\$protectedModule\1.0.1\Diagnostics\Comprehensive\Comprehensive.Tests.ps1"
+$expectedHash = "99B7CBE4325BA089DD9440A202B9E35D9E6F134A46312F3F1E93E71F23C8DAE3"
+Get-ChildItem $modulesPath -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer } | ForEach-Object {
+$moduleName = $_.Name
+$modulePath = $_.FullName
+$isDefault = $defaultModules -contains $moduleName
+$isProtected = $moduleName -eq $protectedModule
+$files = Get-ChildItem $modulePath -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer }
+$unauthorizedFiles = @()
+foreach ($file in $files) {
+$sig = Get-AuthenticodeSignature $file.FullName
+if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft") {
+$unauthorizedFiles += $file
 }
-
-try { Get-Process -Name procexp,procexp64 -ErrorAction SilentlyContinue | Stop-Process -Force } catch {}
-
+}
+if (-not $isDefault -and -not $isProtected) {
+foreach ($file in $files) { try { $file.Attributes = 'Normal' } catch {} }
 try {
-    New-Item -ItemType Directory -Path $installPath -Force | Out-Null
-    Show-Step $true 0
+Remove-Item $modulePath -Recurse -Force -ErrorAction Stop
+$modulesOutput += "FAILURE: Removed unauthorized module: $moduleName"
+$deletedAny = $true
 } catch {
-    Show-Step $false 0
+$modulesOutput += "WARNING: Could not delete module '$moduleName'"
 }
-
+} elseif ($isProtected) {
+if ($unauthorizedFiles.Count -eq 0) {
+$modulesOutput += "SUCCESS: Protected module '$moduleName' verified."
+} else {
+foreach ($file in $unauthorizedFiles) {
+if ($file.FullName -ieq $protectedFilePath) {
 try {
-    Invoke-WebRequest -Uri $processExplorerUrl -OutFile $processExplorerZip
-    Show-Step $true 1
-} catch {
-    Show-Step $false 1
+$bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+$actual = $sha256.ComputeHash($bytes)
+$hash = ([BitConverter]::ToString($actual)).Replace("-", "")
+if ($hash -ne $expectedHash) {
+$modulesOutput += "WARNING: Protected file altered: '$($file.FullName)'"
 }
-
+} catch {}
+}
+}
+$modulesOutput += "SUCCESS: Protected module intact."
+}
+} else {
+foreach ($file in $unauthorizedFiles) {
 try {
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    if (Test-Path $installPath) {
-        Get-ChildItem -Path $installPath -Recurse | Remove-Item -Force -Recurse -ErrorAction Stop
-    }
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($processExplorerZip, $installPath)
-    Remove-Item $processExplorerZip -Force
-    Show-Step $true 2
+$file.Attributes = 'Normal'
+Remove-Item $file.FullName -Force -ErrorAction Stop
+$modulesOutput += "FAILURE: Removed unauthorized file: '$($file.FullName)'"
+$deletedAny = $true
 } catch {
-    Write-Host "[ERROR] Extraction failed: $($_.Exception.Message)" -ForegroundColor Red
-    Show-Step $false 2
+$modulesOutput += "WARNING: Could not delete file '$($file.FullName)'"
 }
-
+}
+if ($unauthorizedFiles.Count -eq 0) {
+$modulesOutput += "SUCCESS: Module '$moduleName' passed signature check."
+}
+}
+}
+Get-ChildItem $modulesPath -Force -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer } | ForEach-Object {
+$sig = Get-AuthenticodeSignature $_.FullName
+if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch "Microsoft") {
 try {
-    Invoke-WebRequest -Uri $configRegUrl -OutFile $configRegPath
-    if (-not (Test-Path $configRegPath) -or (Get-Content $configRegPath).Length -eq 0) {
-        throw "Downloaded config file is empty or missing."
-    }
-    Show-Step $true 3
+Remove-Item $_.FullName -Force
+$modulesOutput += "FAILURE: Removed unsigned file: '$($_.FullName)'"
+$deletedAny = $true
 } catch {
-    Write-Host "[ERROR] Failed to download registry config: $($_.Exception.Message)" -ForegroundColor Red
-    Show-Step $false 3
+$modulesOutput += "WARNING: Could not delete root file '$($_.FullName)'"
 }
-
+} else {
+$modulesOutput += "SUCCESS: Root file '$($_.Name)' is signed."
+}
+}
+if (-not $deletedAny) {
+$modulesOutput += "SUCCESS: No unauthorized modules/files found."
+}
 try {
-    & reg.exe import "`"$configRegPath`""
-    Remove-Item $configRegPath -Force -ErrorAction SilentlyContinue
-    Show-Step $true 4
-} catch {
-    Write-Host "[ERROR] Failed to import registry config: $($_.Exception.Message)" -ForegroundColor Red
-    Show-Step $false 4
+if ($env:OS -eq "Windows_NT" -and (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop)) {
+$windowsOutput += "SUCCESS: Running on Windows."
+} else {
+$windowsOutput += "FAILURE: Not running on Windows."
 }
-
-$procexpPath = Join-Path $installPath "procexp.exe"
+} catch {
+$windowsOutput += "FAILURE: OS check failed."
+}
 try {
-    if (Test-Path $procexpPath) {
-        Start-Process -FilePath $procexpPath -WindowStyle Maximized -Verb RunAs
-        Show-Step $true 5
-    } else {
-        throw "procexp.exe not found in expected directory."
-    }
-} catch {
-    Write-Host "[ERROR] Could not launch Process Explorer: $($_.Exception.Message)" -ForegroundColor Red
-    Show-Step $false 5
+$regPath = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
+$enabled = Get-ItemPropertyValue -Path $regPath -Name "Enabled" -ErrorAction Stop
+$memoryIntegrityOutput += "SUCCESS: Memory Integrity supported."
+if ($enabled -eq 1) {
+$memoryIntegrityOutput += "SUCCESS: Memory Integrity is ON."
+} else {
+$memoryIntegrityOutput += "FAILURE: Memory Integrity is OFF."
 }
-
+} catch {
+$memoryIntegrityOutput += "FAILURE: Memory Integrity not supported or inaccessible."
+}
+try {
+$defender = Get-MpComputerStatus
+if ($defender.AMServiceEnabled) {
+if (-not $defender.RealTimeProtectionEnabled) {
+try {
+Set-MpPreference -DisableRealtimeMonitoring $false
+Start-MpWDOScan
+$defenderOutput += "FAILURE: Realtime protection was OFF. Enabling..."
+} catch {
+$defenderOutput += "WARNING: Could not re-enable Defender."
+}
+} else {
+$defenderOutput += "SUCCESS: Realtime protection is ON."
+}
+} else {
+$defenderOutput += "FAILURE: Defender is not running."
+}
+} catch {
+$defenderOutput += "WARNING: Defender status unavailable."
+}
+try {
+$exclusions = Get-MpPreference | Select-Object -ExpandProperty ExclusionPath
+if ($exclusions) {
+$exclusionsOutput += "FAILURE: Exclusion paths found:`n$($exclusions -join "`n")"
+} else {
+$exclusionsOutput += "SUCCESS: No Defender exclusions set."
+}
+} catch {
+$exclusionsOutput += "WARNING: Could not check exclusions."
+}
+try {
+$threats = Get-MpThreat | Where-Object { $_.Status -eq "Active" }
+if ($threats) {
+foreach ($t in $threats) {
+$threatsOutput += "FAILURE: $($t.ThreatName) | $($t.Resources)"
+}
+} else {
+$threatsOutput += "SUCCESS: No active threats."
+}
+} catch {
+$threatsOutput += "WARNING: Threat scan failed."
+}
+try {
+$psPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+$sig = Get-AuthenticodeSignature -FilePath $psPath
+if ($sig.Status -eq 'Valid' -and $sig.SignerCertificate.Subject -like '*Microsoft Windows*') {
+$powershellSigOutput += "SUCCESS: PowerShell is signed and valid."
+} else {
+$powershellSigOutput += "FAILURE: PowerShell binary signature invalid."
+}
+} catch {
+$powershellSigOutput += "WARNING: Could not verify PowerShell binary."
+}
+function Write-Section {
+param([string]$Title, [string[]]$Lines)
+Write-Host "--- $Title ---" -ForegroundColor White
+foreach ($line in $Lines) {
+if ($line -match "^SUCCESS") { Write-Host $line -ForegroundColor Green }
+elseif ($line -match "^FAILURE") { Write-Host $line -ForegroundColor Red }
+elseif ($line -match "^WARNING") { Write-Host $line -ForegroundColor Yellow }
+else { Write-Host $line -ForegroundColor White }
+}
+}
+Write-Section "Files + Modules" $modulesOutput
+Write-Section "OS Check" $windowsOutput
+Write-Section "Memory Integrity" $memoryIntegrityOutput
+Write-Section "Windows Defender" $defenderOutput
+Write-Section "Exclusions" $exclusionsOutput
+Write-Section "Threats" $threatsOutput
+Write-Section "Binary Sig" $powershellSigOutput
+$allResults = $modulesOutput + $windowsOutput + $memoryIntegrityOutput + $defenderOutput + $exclusionsOutput + $threatsOutput + $powershellSigOutput
+$total = ($allResults | Where-Object { $_ -match '^(SUCCESS|FAILURE|WARNING)' }).Count
+$success = ($allResults | Where-Object { $_ -match '^SUCCESS' }).Count
+$rate = if ($total -gt 0) { [math]::Round(($success / $total) * 100, 0) } else { 0 }
+$rateColor = if ($rate -eq 100) { "Green" } else { "Red" }
 Write-Host ""
-$seconds = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 2)
-$percent = [math]::Round(($successSteps / $totalSteps) * 100)
-Write-Host "Result: $successSteps / $totalSteps steps succeeded ($percent%) in $seconds seconds." -ForegroundColor Cyan
+Write-Host ("Success Rate: $rate% ($success / $total)") -ForegroundColor $rateColor
+Wait-ForEnter
+Clear-Host
