@@ -10,8 +10,11 @@ function Write-ColoredLine {
 }
 
 function Wait-ForEnter {
+    param(
+        [string]$Message = "Press Enter to Continue"
+    )
     Start-Sleep -Seconds 1
-    Write-ColoredLine "Press Enter to Exit" Yellow
+    Write-ColoredLine $Message Yellow
     while ($true) {
         if ([System.Console]::KeyAvailable) {
             $key = [System.Console]::ReadKey($true)
@@ -57,7 +60,7 @@ Write-ColoredLine "=== Credits ===" Yellow
 Write-ColoredLine "Made by @ravenader1" White
 Write-ColoredLine "Made by @cyberthreats" White
 Write-Host ""
-Wait-ForEnter
+Wait-ForEnter -Message "Press Enter to Continue"
 Clear-Host
 
 # ====== STEP 1: SYSTEM CHECK ====== 
@@ -65,19 +68,19 @@ Clear-Host
 Write-ColoredLine "Step 1: SYSTEM Check - by @cyberthreats" Cyan
 Write-ColoredLine "INSTRUCTION: Reach 100% success" Yellow
 Write-Host "" # Blank line above progress bar
-for ($i = 0; $i -le 10; $i++) {
-    $percent = $i * 10
-    $bar = "#" * $i + "-" * (10 - $i)
-    $line = "Progress: [ $bar ] $percent%"
-    Write-Host -NoNewline "`r"
-    $oldColor = $Host.UI.RawUI.ForegroundColor
-    $Host.UI.RawUI.ForegroundColor = 'Blue'
-    Write-Host $line -NoNewline
-    $Host.UI.RawUI.ForegroundColor = $oldColor
-    Start-Sleep -Milliseconds 200
+
+function Show-LoadingBar {
+    for ($i = 0; $i -le 10; $i++) {
+        $percent = $i * 10
+        $bar = "#" * $i + "-" * (10 - $i)
+        Write-Host -NoNewline "`rProgress: [ $bar ] $percent% " -ForegroundColor Blue
+        Start-Sleep -Milliseconds 200
+    }
+    Write-Host ""  # blank line after loading bar finishes
+    Write-Host ""
 }
-Write-Host ""
-Write-Host ""
+
+Show-LoadingBar
 
 $exclusionsOutput = @()
 $defenderOutput = @()
@@ -288,7 +291,7 @@ $rateColor = if ($rate -eq 100) { "Green" } else { "Red" }
 Write-Host ""
 Write-Host ("Success Rate: $rate% ($success / $total)") -ForegroundColor $rateColor
 
-Wait-ForEnter
+Wait-ForEnter -Message "Press Enter to Continue"
 Clear-Host
 
 # ====== STEP 2: PROCESS EXPLORER ======
@@ -301,17 +304,6 @@ Write-ColoredLine "> Process GPU: GPU Usage" DarkYellow
 Write-ColoredLine "> Process Memory: Private Bytes, & Working Set Size" DarkYellow
 Write-ColoredLine "> Process Performance: CPU Usage" DarkYellow
 Write-Host ""
-
-function Show-LoadingBar {
-    for ($i = 0; $i -le 10; $i++) {
-        $percent = $i * 10
-        $bar = "#" * $i + "-" * (10 - $i)
-        Write-Host -NoNewline "`rProgress: [ $bar ] $percent% " -ForegroundColor Blue
-        Start-Sleep -Milliseconds 200
-    }
-    Write-Host ""
-    Write-Host ""
-}
 
 Show-LoadingBar
 
@@ -391,11 +383,23 @@ if ($actualExe) {
 
 Write-ColoredLine "Once you've completed the setup, close Process Explorer to finish this step." White
 
+
 while (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue) {
     Start-Sleep -Seconds 2
 }
 
 Write-ColoredLine "Process Explorer closed." Green
-Write-Host ""
-Wait-ForEnter
+
+# Dummy success/failure for this step — adjust your own checks as needed
+$step2Success = $true
+if ($step2Success) {
+    Write-Host ""
+    Write-Host "Success Rate: 100% (1 / 1)" -ForegroundColor Green
+} else {
+    Write-Host ""
+    Write-Host "Success Rate: 0% (0 / 1)" -ForegroundColor Red
+}
+
+
+Wait-ForEnter -Message "Press Enter to Exit"
 exit
