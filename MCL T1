@@ -396,6 +396,6 @@ while (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue) {
 }
 
 Write-ColoredLine "Process Explorer closed." Green
-
+Write-Host ""
 Wait-ForEnter
-exit 
+exit
