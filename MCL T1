@@ -291,9 +291,9 @@ Write-Host ("Success Rate: $rate% ($success / $total)") -ForegroundColor $rateCo
 Wait-ForEnter
 Clear-Host
 
-# ====== STEP 6: PROCESS EXPLORER ======
+# ====== STEP 2: PROCESS EXPLORER ======
 
-Write-ColoredLine "Step 6: Process Explorer - by @ravenader1" Cyan
+Write-ColoredLine "Step 2: Process Explorer - by @ravenader1" Cyan
 Write-ColoredLine "INSTRUCTION: Hover over the `"Process`" Column, right click, and then click on `"Select Columns`"." Yellow
 Write-ColoredLine "Ensure these are selected. Columns must be fully visible. Slowly scroll to the very bottom, then close the window" Yellow
 Write-ColoredLine "> Process Image: Company name, Image path, Command Line, & Virus Total." DarkYellow
