@@ -346,10 +346,10 @@ if ($runningPE) {
     $runningPE | ForEach-Object {
         try {
             $_ | Stop-Process -Force -ErrorAction Stop
-            Write-ColoredLine "[SUCCESS]  • Terminated process ID $($_.Id)." Green
+            Write-ColoredLine "Terminated process ID $($_.Id)." Green
         }
         catch {
-            Write-ColoredLine "[FAILED]  • Failed to terminate process ID $($_.Id): $($_.Exception.Message)" Red
+            Write-ColoredLine "Failed to terminate process ID $($_.Id): $($_.Exception.Message)" Red
         }
     }
     Start-Sleep -Seconds 2
