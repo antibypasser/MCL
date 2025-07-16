@@ -387,7 +387,7 @@ else {
         Write-ColoredLine "[SUCCESS] Created folder C:\ToolsETA." Green
     }
     catch {
-        Write-ColoredLine "[INFO] Folder may already exist" Green
+        Write-ColoredLine "[SUCCESS] Folder may already exist" Green
     }
 }
 
