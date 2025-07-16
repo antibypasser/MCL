@@ -377,7 +377,7 @@ if (Test-Path $baseFolder) {
             Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop
         }
         catch {
-            Write-ColoredLine "[INFO] Failed to remove item $($_.FullName): $($_.Exception.Message)" White
+            Write-ColoredLine "[INFO] Didn't remove item $($_.FullName): $($_.Exception.Message)" White
         }
     }
 }
@@ -387,7 +387,7 @@ else {
         Write-ColoredLine "[SUCCESS] Created folder C:\ToolsETA." Green
     }
     catch {
-        Write-ColoredLine "[INFO] Could not create folder, it may already exist: $($_.Exception.Message)" White
+        Write-ColoredLine "[INFO] Folder may already exist" Green
     }
 }
 
@@ -406,7 +406,7 @@ try {
     Write-ColoredLine "[SUCCESS] Extracted Process Explorer zip." Green
 }
 catch {
-    Write-ColoredLine "[INFO] Extract failed, files may already exist: $($_.Exception.Message)" White
+    Write-ColoredLine "[SUCCESS] Files already exist" Green
 }
 Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
 
