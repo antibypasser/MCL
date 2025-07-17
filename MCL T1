@@ -346,10 +346,10 @@ if ($runningPE) {
     $runningPE | ForEach-Object {
         try {
             $_ | Stop-Process -Force -ErrorAction Stop
-            Write-ColoredLine "Terminated process ID $($_.Id)." Green
+            Write-ColoredLine "[SUCCESS]  • Terminated process ID $($_.Id)." Green
         }
         catch {
-            Write-ColoredLine "Failed to terminate process ID $($_.Id): $($_.Exception.Message)" Red
+            Write-ColoredLine "[FAILED]  • Failed to terminate process ID $($_.Id): $($_.Exception.Message)" Red
         }
     }
     Start-Sleep -Seconds 2
@@ -384,29 +384,29 @@ if (Test-Path $baseFolder) {
 else {
     try {
         New-Item -ItemType Directory -Path $baseFolder -ErrorAction Stop | Out-Null
-        Write-ColoredLine "[SUCCESS] Created folder C:\ToolsETA." Green
+        Write-ColoredLine '[SUCCESS] Created folder C:\ToolsETA.' Green
     }
     catch {
-        Write-ColoredLine "[SUCCESS] Folder may already exist" Green
+        Write-ColoredLine '[INFO] Folder may already exist' Green
     }
 }
 
 try {
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
-    Write-ColoredLine "[SUCCESS] Downloaded Process Explorer." Green
+    Write-ColoredLine '[SUCCESS] Downloaded Process Explorer.' Green
 }
 catch {
-    Write-ColoredLine "[FAILED] Failed to download Process Explorer: $($_.Exception.Message)" Red
+    Write-ColoredLine '[FAILED] Failed to download Process Explorer: $($_.Exception.Message)' Red
     exit
 }
 
 try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extractFolder)
-    Write-ColoredLine "[SUCCESS] Extracted Process Explorer zip." Green
+    Write-ColoredLine '[SUCCESS] Extracted Process Explorer zip.' Green
 }
 catch {
-    Write-ColoredLine "[SUCCESS] Files already exist" Green
+    Write-ColoredLine '[SUCCESS] Files already exist' Green
 }
 Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
 
@@ -438,6 +438,7 @@ if ($actualExe) {
     $process = Start-Process -FilePath $actualExe.FullName -PassThru
 
     Add-Type @"
+Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class WinAPI {
@@ -469,12 +470,14 @@ public class WinAPI {
 
     $process.WaitForExit()
 
-    Write-ColoredLine "Success Rate: 100% (1 / 1)." Green
-}
+    Write-ColoredLine "[SUCCESS] Success Rate: 100% (1 / 1)." Green
 else {
     Write-ColoredLine "[FAILED] procexp64.exe was not found." Red
-    Write-ColoredLine "Success Rate: 0% (0 / 1)." Red
+    Write-ColoredLine "[SUCCESS] Success Rate: 0% (0 / 1)." Red
 }
+
+Wait-ForEnter
+exit
 
 Wait-ForEnter
 exit
