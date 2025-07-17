@@ -438,7 +438,6 @@ if ($actualExe) {
     $process = Start-Process -FilePath $actualExe.FullName -PassThru
 
     Add-Type @"
-Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class WinAPI {
@@ -471,13 +470,11 @@ public class WinAPI {
     $process.WaitForExit()
 
     Write-ColoredLine "[SUCCESS] Success Rate: 100% (1 / 1)." Green
+}
 else {
     Write-ColoredLine "[FAILED] procexp64.exe was not found." Red
     Write-ColoredLine "[SUCCESS] Success Rate: 0% (0 / 1)." Red
 }
-
-Wait-ForEnter
-exit
 
 Wait-ForEnter
 exit
