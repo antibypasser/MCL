@@ -335,7 +335,6 @@ Write-ColoredLine "INSTRUCTION: Wait for Process Explorer to open. Scroll to the
 Write-Host ""
 Show-LoadingBar
 
-# Kill existing Process Explorer
 $processNames = @("procexp32", "procexp64", "procexp64a")
 $runningPE = Get-Process -ErrorAction SilentlyContinue | Where-Object { $processNames -contains $_.ProcessName.ToLower() }
 
@@ -355,7 +354,6 @@ if ($runningPE) {
     Write-ColoredLine "[SUCCESS] No running Process Explorer processes were found." Green
 }
 
-# Setup directories
 $baseFolder = "C:\ToolsETA"
 $extractFolder = Join-Path $baseFolder "ProcessExplorer"
 $zipUrl = "https://download.sysinternals.com/files/ProcessExplorer.zip"
@@ -385,7 +383,6 @@ if (Test-Path $baseFolder) {
     }
 }
 
-# Download zip
 try {
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
     Write-ColoredLine '[SUCCESS] Downloaded Process Explorer.' Green
@@ -394,7 +391,6 @@ try {
     exit
 }
 
-# Extract zip
 try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extractFolder)
@@ -404,7 +400,6 @@ try {
 }
 Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
 
-# Download registry config
 $regFileUrl = "https://pastebin.com/raw/gse8NxwU"
 $regFilePath = Join-Path $baseFolder "procexp_config.reg"
 
@@ -416,7 +411,6 @@ try {
     exit
 }
 
-# Import registry silently
 try {
     cmd.exe /c "reg import `"$regFilePath`" >nul 2>&1"
     Write-ColoredLine "[SUCCESS] Imported registry configuration successfully." Green
@@ -425,7 +419,6 @@ try {
     exit
 }
 
-# Launch Process Explorer
 $actualExe = Get-ChildItem -Path $extractFolder -Filter "procexp64.exe" -Recurse | Select-Object -First 1
 
 if ($actualExe) {
