@@ -32,11 +32,11 @@ Write-Host "| |___  | |/ ___ \  |  _ <  __/ (__  |  _ <| |_| | |  __/\__ \" -For
 Write-Host "|_____| |_/_/   \_\ |_| \_\___|\___| |_| \_\\__,_|_|\___||___/" -ForegroundColor Yellow
 Write-ColoredLine ""
 Write-ColoredLine "=== Recording Rule Hub ===" Yellow
-Write-ColoredLine "➢ Complete both steps with 100% success to pass." White
-Write-ColoredLine "➢ Applications will download and extract to C:\ToolsETA." White
-Write-ColoredLine "➢ If a prompt shows up, press OK to run the application." White
-Write-ColoredLine "➢ Follow the instructions listed on each step." White
-Write-ColoredLine "➢ This PowerShell process currently has 2 steps." White
+Write-ColoredLine "Complete both steps with 100% success to pass." White
+Write-ColoredLine "Applications will download and extract to C:\ToolsETA." White
+Write-ColoredLine "If a prompt shows up, press OK to run the application." White
+Write-ColoredLine "Follow the instructions listed on each step." White
+Write-ColoredLine "This PowerShell process currently has 2 steps." White
 Write-Host ""
 $cpu = Get-WmiObject Win32_Processor | Select-Object -First 1
 
@@ -49,14 +49,14 @@ if ($cpu.NumberOfCores -ge 4 -and $cpu.MaxClockSpeed -ge 2500) {
 }
 Write-ColoredLine ""
 Write-ColoredLine "=== Discord Servers ===" Yellow
-Write-ColoredLine "➢ discord.gg/mcl" White
-Write-ColoredLine "➢ discord.gg/rivalsleague" White
-Write-ColoredLine "➢ discord.gg/eta" White
-Write-ColoredLine "➢ discord.gg/etajd" White
+Write-ColoredLine "discord.gg/mcl" White
+Write-ColoredLine "discord.gg/rivalsleague" White
+Write-ColoredLine "discord.gg/eta" White
+Write-ColoredLine "discord.gg/etajd" White
 Write-ColoredLine ""
 Write-ColoredLine "=== Credits ===" Yellow
-Write-ColoredLine "➢ Made by @ravenader1" White
-Write-ColoredLine "➢ Made by @cyberthreats" White
+Write-ColoredLine "Made by @ravenader1" White
+Write-ColoredLine "Made by @cyberthreats" White
 Write-Host ""
 Wait-ForEnter -Message "Press Enter to Continue"
 Clear-Host
