@@ -388,7 +388,6 @@ try {
     Write-ColoredLine '[SUCCESS] Downloaded Process Explorer.' Green
 } catch {
     Write-ColoredLine '[FAILED] Failed to download Process Explorer: $($_.Exception.Message)' Red
-    exit
 }
 
 try {
@@ -408,15 +407,21 @@ try {
     Write-ColoredLine "[SUCCESS] Downloaded Process Explorer registry configuration." Green
 } catch {
     Write-ColoredLine "[FAILED] Failed to download registry config: $($_.Exception.Message)" Red
-    exit
 }
 
 try {
-    cmd.exe /c "reg import `"$regFilePath`" >nul 2>&1"
-    Write-ColoredLine "[SUCCESS] Imported registry configuration successfully." Green
+    $cmdPath = "$env:SystemRoot\System32\cmd.exe"
+    if (-Not (Test-Path $cmdPath)) {
+        throw "cmd.exe not found at expected location: $cmdPath"
+    }
+    & $cmdPath /c "reg import `"$regFilePath`""
+    if ($LASTEXITCODE -eq 0) {
+        Write-ColoredLine "[SUCCESS] Imported registry configuration successfully." Green
+    } else {
+        Write-ColoredLine "[FAILED] reg import returned non-zero exit code: $LASTEXITCODE" Red
+    }
 } catch {
     Write-ColoredLine "[FAILED] Registry importing failed: $($_.Exception.Message)" Red
-    exit
 }
 
 $actualExe = Get-ChildItem -Path $extractFolder -Filter "procexp64.exe" -Recurse | Select-Object -First 1
@@ -426,7 +431,6 @@ if ($actualExe) {
     $process = Start-Process -FilePath $actualExe.FullName -PassThru
     Start-Sleep -Seconds 1
 
-    # Maximize using SendKeys (no Add-Type)
     $wshell = New-Object -ComObject wscript.shell
     Start-Sleep -Milliseconds 500
     $null = $wshell.AppActivate($process.Id)
