@@ -1,3 +1,18 @@
+If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Restarting script with administrative privileges..."
+    Start-Sleep -Milliseconds 500
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = "powershell.exe"
+    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    $psi.Verb = "runas"
+    try {
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
+    } catch {
+        Write-Host "User canceled the UAC prompt or an error occurred." -ForegroundColor Red
+    }
+    exit
+}
+
 function Write-ColoredLine {
     param (
         [string]$Text,
