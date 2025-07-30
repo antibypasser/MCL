@@ -1,16 +1,12 @@
-If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Restarting script with administrative privileges..."
-    Start-Sleep -Milliseconds 500
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = "powershell.exe"
-    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    $psi.Verb = "runas"
-    try {
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
-    } catch {
-        Write-Host "User canceled the UAC prompt or an error occurred." -ForegroundColor Red
-    }
-    exit
+$IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $IsAdmin) {
+    Write-Host "`n[WARNING] This script is NOT running with Administrator privileges." -ForegroundColor Red
+    Write-Host "[ACTION] Please right-click and 'Run with PowerShell' as Administrator." -ForegroundColor Yellow
+    Write-Host ""
+    Pause
+    exit 1
 }
 
 function Write-ColoredLine {
@@ -78,7 +74,7 @@ Clear-Host
 
 # ====== STEP 1: SYSTEM CHECK ====== 
 
-Write-ColoredLine "Step 1: SYSTEM Check" Cyan
+Write-ColoredLine "Step 1 of 2: SYSTEM Check" Cyan
 Write-ColoredLine "INSTRUCTION: Reach 100% success" Yellow
 
 Write-Host "" # Blank line above progress bar
@@ -333,19 +329,26 @@ function Wait-ForEnter {
     }
 }
 
-function Show-LoadingBar {
-    for ($i = 0; $i -le 10; $i++) {
-        $percent = $i * 10
-        $bar = "#" * $i + "-" * (10 - $i)
-        Write-Host -NoNewline "`rProgress: [ $bar ] $percent% " -ForegroundColor Blue
-        Start-Sleep -Milliseconds 200
+# Relaunch script as Administrator if not already
+$IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $IsAdmin) {
+    $scriptPath = try {
+        (Resolve-Path -Path $MyInvocation.MyCommand.Definition).Path
+    } catch {
+        Write-Host "[ERROR] Could not resolve script path. Are you running this from a file?" -ForegroundColor Red
+        pause
+        exit 1
     }
-    Write-Host ""
-    Write-Host ""
+
+    Write-Host "[INFO] Relaunching with admin rights..." -ForegroundColor Yellow
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs
+    exit
 }
 
 Clear-Host
-Write-ColoredLine "Step 2: Process Explorer" Cyan
+Write-ColoredLine "Step 2 of 2: Process Explorer" Cyan
 Write-ColoredLine "INSTRUCTION: Wait for Process Explorer to open. Scroll to the bottom, then close the window." Yellow
 Write-Host ""
 Show-LoadingBar
