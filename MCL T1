@@ -74,19 +74,19 @@ Clear-Host
 
 # ====== STEP 1: SYSTEM CHECK ====== 
 
-Write-ColoredLine "Step 1 of 2: SYSTEM Check" Cyan
+Write-ColoredLine "Step 1 of 2: SYSTEM Check" White
 Write-ColoredLine "INSTRUCTION: Reach 100% success" Yellow
 
-Write-Host "" # Blank line above progress bar
+Write-Host ""
 
 function Show-LoadingBar {
     for ($i = 0; $i -le 10; $i++) {
         $percent = $i * 10
         $bar = "#" * $i + "-" * (10 - $i)
-        Write-Host -NoNewline "`rProgress: [ $bar ] $percent% " -ForegroundColor Blue
+        Write-Host -NoNewline "`rProgress: [ $bar ] $percent% " -ForegroundColor White
         Start-Sleep -Milliseconds 200
     }
-    Write-Host ""  # blank line after loading bar finishes
+    Write-Host ""
     Write-Host ""
 }
 
@@ -329,7 +329,6 @@ function Wait-ForEnter {
     }
 }
 
-# Relaunch script as Administrator if not already
 $IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -348,7 +347,7 @@ if (-not $IsAdmin) {
 }
 
 Clear-Host
-Write-ColoredLine "Step 2 of 2: Process Explorer" Cyan
+Write-ColoredLine "Step 2 of 2: Process Explorer" White
 Write-ColoredLine "INSTRUCTION: Wait for Process Explorer to open. Scroll to the bottom, then close the window." Yellow
 Write-Host ""
 Show-LoadingBar
