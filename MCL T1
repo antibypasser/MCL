@@ -238,7 +238,9 @@ try {
 
 try {
     $defender = Get-MpComputerStatus
-    if ($defender.AMServiceEnabled) {
+    $service = Get-Service -Name WinDefend -ErrorAction SilentlyContinue
+
+    if ($defender.AntivirusEnabled -and $service.Status -eq 'Running') {
         if (-not $defender.RealTimeProtectionEnabled) {
             try {
                 Set-MpPreference -DisableRealtimeMonitoring $false
@@ -251,10 +253,10 @@ try {
             $defenderOutput += "SUCCESS: Realtime protection is ON."
         }
     } else {
-        $defenderOutput += "FAILURE: Defender is not running."
+        $defenderOutput += "FAILURE: Microsoft Defender Antivirus is not running."
     }
 } catch {
-    $defenderOutput += "WARNING: Defender status unavailable."
+    $defenderOutput += "WARNING: Could not query Defender status."
 }
 
 try {
