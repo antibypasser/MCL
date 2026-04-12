@@ -11,7 +11,6 @@ $paths = @(
     "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows Defender\Exclusions\TemporaryPaths"
 )
 
-# convert HKLM format to PowerShell format
 function Convert-Path {
     param([string]$p)
     return $p -replace "HKEY_LOCAL_MACHINE", "HKLM:"
@@ -56,7 +55,6 @@ function Check-Key {
     }
 }
 
-# ---- PRINT ALL LOCATIONS FIRST ----
 Write-Host "`n=== REGISTRY PATHS BEING CHECKED ===" -ForegroundColor Cyan
 foreach ($p in $paths) {
     Write-Host $p
