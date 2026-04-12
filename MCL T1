@@ -76,7 +76,7 @@ Write-Host "Detected GPUs:" -ForegroundColor White
 $gpuNames | ForEach-Object { Write-Host " - $_" -ForegroundColor White }
 
 Write-Host ""
-Write-Host "Active GPU (used for checks): $activeGPUName" -ForegroundColor Cyan
+Write-Host "Active GPU: $activeGPUName" -ForegroundColor Cyan
 
 $goodGPUs = @("RTX 30", "RTX 40", "RTX 50", "RX 6000", "RX 7000")
 
