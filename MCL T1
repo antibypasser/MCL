@@ -392,120 +392,191 @@ Write-ColoredLine "INSTRUCTION: Wait for Process Explorer to open. Scroll to the
 Write-Host ""
 Show-LoadingBar
 
-$processNames = @("procexp32", "procexp64", "procexp64a")
-$runningPE = Get-Process -ErrorAction SilentlyContinue | Where-Object { $processNames -contains $_.ProcessName.ToLower() }
+# Close existing Process Explorer processes
+$processNames = @("procexp", "procexp32", "procexp64", "procexp64a")
+$runningPE = Get-Process -ErrorAction SilentlyContinue | Where-Object {
+    $processNames -contains $_.ProcessName.ToLower()
+}
 
 if ($runningPE) {
-    Write-ColoredLine "[SUCCESS] Found and terminated running Process Explorer process(es)." Green
-    $runningPE | ForEach-Object {
+    foreach ($proc in $runningPE) {
         try {
-            $_ | Stop-Process -Force -ErrorAction Stop
-            Write-ColoredLine "[SUCCESS]  • Terminated process ID $($_.Id)." Green
+            Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+            Write-ColoredLine "[SUCCESS] Terminated Process Explorer PID $($proc.Id)." Green
         } catch {
-            Write-ColoredLine "[FAILED]  • Failed to terminate process ID $($_.Id): $($_.Exception.Message)" Red
+            Write-ColoredLine "[FAILED] Failed to terminate PID $($proc.Id): $($_.Exception.Message)" Red
         }
     }
-    Start-Sleep -Seconds 2
-    Write-ColoredLine "[SUCCESS] All Process Explorer processes terminated." Green
+    Start-Sleep -Seconds 1
 } else {
     Write-ColoredLine "[SUCCESS] No running Process Explorer processes were found." Green
 }
 
+# Paths
 $baseFolder = "C:\ToolsETA"
 $extractFolder = Join-Path $baseFolder "ProcessExplorer"
 $zipUrl = "https://download.sysinternals.com/files/ProcessExplorer.zip"
 $zipPath = Join-Path $baseFolder "ProcessExplorer.zip"
 
-if (Test-Path $baseFolder) {
-    Write-ColoredLine "[SUCCESS] Cleaned up existing C:\ToolsETA folder." Green
-    Get-ChildItem -Path $baseFolder -Force -Recurse | ForEach-Object {
-        try {
-            if ($_.Attributes -band [System.IO.FileAttributes]::ReadOnly) {
-                $_.Attributes = $_.Attributes -bxor [System.IO.FileAttributes]::ReadOnly
-            }
-            if ($_.Attributes -band [System.IO.FileAttributes]::Hidden) {
-                $_.Attributes = $_.Attributes -bxor [System.IO.FileAttributes]::Hidden
-            }
-            Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop
-        } catch {
-            Write-ColoredLine "[INFO] Didn't remove item $($_.FullName): $($_.Exception.Message)" White
-        }
-    }
-} else {
-    try {
-        New-Item -ItemType Directory -Path $baseFolder -ErrorAction Stop | Out-Null
-        Write-ColoredLine '[SUCCESS] Created folder C:\ToolsETA.' Green
-    } catch {
-        Write-ColoredLine '[INFO] Folder may already exist' Green
-    }
-}
-
-try {
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
-    Write-ColoredLine '[SUCCESS] Downloaded Process Explorer.' Green
-} catch {
-    Write-ColoredLine '[FAILED] Failed to download Process Explorer: $($_.Exception.Message)' Red
-}
-
-try {
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extractFolder)
-    Write-ColoredLine '[SUCCESS] Extracted Process Explorer zip.' Green
-} catch {
-    Write-ColoredLine '[SUCCESS] Files already exist' Green
-}
-Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-
 $regFileUrl = "https://pastebin.com/raw/gse8NxwU"
 $regFilePath = Join-Path $baseFolder "procexp_config.reg"
 
+# Prepare working folder
 try {
-    Invoke-WebRequest -Uri $regFileUrl -OutFile $regFilePath -UseBasicParsing -ErrorAction Stop
+    if (Test-Path $baseFolder) {
+        Remove-Item -Path $baseFolder -Recurse -Force -ErrorAction Stop
+        Write-ColoredLine "[SUCCESS] Cleaned up existing C:\ToolsETA folder." Green
+    }
+
+    New-Item -ItemType Directory -Path $baseFolder -Force -ErrorAction Stop | Out-Null
+    Write-ColoredLine "[SUCCESS] Prepared C:\ToolsETA." Green
+} catch {
+    Write-ColoredLine "[FAILED] Could not prepare C:\ToolsETA: $($_.Exception.Message)" Red
+    Wait-ForEnter
+    exit 1
+}
+
+# Use Windows curl.exe instead of Invoke-WebRequest because Invoke-WebRequest
+# on this system is not accepting -OutFile.
+$curl = "$env:SystemRoot\System32\curl.exe"
+
+if (-not (Test-Path $curl)) {
+    Write-ColoredLine "[FAILED] curl.exe was not found at $curl." Red
+    Wait-ForEnter
+    exit 1
+}
+
+# Download Process Explorer
+try {
+    Write-ColoredLine "[INFO] Downloading Process Explorer..." Yellow
+
+    & $curl "-L" "--fail" "--silent" "--show-error" "--output" $zipPath $zipUrl
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "curl.exe returned exit code $LASTEXITCODE."
+    }
+
+    if (-not (Test-Path $zipPath)) {
+        throw "Process Explorer ZIP was not created."
+    }
+
+    if ((Get-Item $zipPath).Length -lt 10000) {
+        throw "Downloaded Process Explorer ZIP is unexpectedly small."
+    }
+
+    Write-ColoredLine "[SUCCESS] Downloaded Process Explorer." Green
+} catch {
+    Write-ColoredLine "[FAILED] Failed to download Process Explorer: $($_.Exception.Message)" Red
+    Wait-ForEnter
+    exit 1
+}
+
+# Extract Process Explorer
+try {
+    if (Test-Path $extractFolder) {
+        Remove-Item $extractFolder -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Expand-Archive -LiteralPath $zipPath -DestinationPath $extractFolder -Force -ErrorAction Stop
+    Write-ColoredLine "[SUCCESS] Extracted Process Explorer zip." Green
+} catch {
+    Write-ColoredLine "[FAILED] Failed to extract Process Explorer: $($_.Exception.Message)" Red
+    Wait-ForEnter
+    exit 1
+}
+
+Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+
+# Download registry configuration
+try {
+    Write-ColoredLine "[INFO] Downloading Process Explorer registry configuration..." Yellow
+
+    & $curl "-L" "--fail" "--silent" "--show-error" "--output" $regFilePath $regFileUrl
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "curl.exe returned exit code $LASTEXITCODE."
+    }
+
+    if (-not (Test-Path $regFilePath)) {
+        throw "Registry configuration file was not created."
+    }
+
+    if ((Get-Item $regFilePath).Length -eq 0) {
+        throw "Registry configuration file is empty."
+    }
+
     Write-ColoredLine "[SUCCESS] Downloaded Process Explorer registry configuration." Green
 } catch {
     Write-ColoredLine "[FAILED] Failed to download registry config: $($_.Exception.Message)" Red
+    Wait-ForEnter
+    exit 1
 }
 
+# Import registry configuration
 try {
-    $cmdPath = "$env:SystemRoot\System32\cmd.exe"
-    if (-Not (Test-Path $cmdPath)) {
-        throw "cmd.exe not found at expected location: $cmdPath"
+    $regExe = "$env:SystemRoot\System32\reg.exe"
+
+    if (-not (Test-Path $regExe)) {
+        throw "reg.exe not found at expected location: $regExe"
     }
-    & $cmdPath /c "reg import `"$regFilePath`""
+
+    & $regExe import $regFilePath
+
     if ($LASTEXITCODE -eq 0) {
         Write-ColoredLine "[SUCCESS] Imported registry configuration successfully." Green
     } else {
-        Write-ColoredLine "[FAILED] reg import returned non-zero exit code: $LASTEXITCODE" Red
+        throw "reg import returned exit code $LASTEXITCODE."
     }
 } catch {
     Write-ColoredLine "[FAILED] Registry importing failed: $($_.Exception.Message)" Red
+    Wait-ForEnter
+    exit 1
 }
 
-$actualExe = Get-ChildItem -Path $extractFolder -Filter "procexp64.exe" -Recurse | Select-Object -First 1
+# Find Process Explorer executable
+$actualExe = Get-ChildItem -Path $extractFolder -Filter "procexp64.exe" -Recurse -ErrorAction SilentlyContinue |
+    Select-Object -First 1
 
-if ($actualExe) {
-    Write-ColoredLine "[SUCCESS] Launched Process Explorer." Green
-    $process = Start-Process -FilePath $actualExe.FullName -PassThru
+if (-not $actualExe) {
+    Write-ColoredLine "[FAILED] procexp64.exe was not found after extraction." Red
+    Write-ColoredLine "[FAILED] Success Rate: 0% (0 / 1)." Red
+    Wait-ForEnter
+    exit 1
+}
+
+# Launch Process Explorer
+try {
+    Write-ColoredLine "[SUCCESS] Found procexp64.exe." Green
+
+    $process = Start-Process -FilePath $actualExe.FullName -PassThru -ErrorAction Stop
     Start-Sleep -Seconds 1
 
-    $wshell = New-Object -ComObject wscript.shell
-    Start-Sleep -Milliseconds 500
-    $null = $wshell.AppActivate($process.Id)
-    Start-Sleep -Milliseconds 500
-    $wshell.SendKeys('% ')
-    Start-Sleep -Milliseconds 200
-    $wshell.SendKeys('x')
-    Start-Sleep -Milliseconds 500
+    try {
+        $wshell = New-Object -ComObject WScript.Shell
+        Start-Sleep -Milliseconds 500
 
-    Write-ColoredLine "[SUCCESS] Process Explorer window maximized." Green
+        if ($wshell.AppActivate($process.Id)) {
+            Start-Sleep -Milliseconds 500
+            $wshell.SendKeys('% ')
+            Start-Sleep -Milliseconds 200
+            $wshell.SendKeys('x')
+            Start-Sleep -Milliseconds 500
+            Write-ColoredLine "[SUCCESS] Process Explorer window maximized." Green
+        }
+    } catch {
+        # Maximizing/focusing the window is optional.
+        # Process Explorer can still launch successfully without it.
+    }
+
     Write-ColoredLine "[SUCCESS] Process Explorer launched successfully." Green
     Write-Host ""
 
     $process.WaitForExit()
+
     Write-ColoredLine "[SUCCESS] Success Rate: 100% (1 / 1)." Green
-} else {
-    Write-ColoredLine "[FAILED] procexp64.exe was not found." Red
-    Write-ColoredLine "[SUCCESS] Success Rate: 0% (0 / 1)." Red
+} catch {
+    Write-ColoredLine "[FAILED] Could not launch Process Explorer: $($_.Exception.Message)" Red
+    Write-ColoredLine "[FAILED] Success Rate: 0% (0 / 1)." Red
 }
 
 Wait-ForEnter
